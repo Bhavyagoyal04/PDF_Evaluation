@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
 import { 
   ArrowLeft, 
-  FileText, 
   Activity, 
   AlertTriangle, 
   CheckCircle2, 
   Sliders, 
-  Calendar, 
   Info,
   Clock
 } from 'lucide-react';
@@ -24,6 +22,7 @@ export default function ProcessingReport({ documentId, onBack, onOpenEditor }) {
         const data = await getDocument(documentId);
         setDoc(data);
       } catch (err) {
+        console.error(err);
         setError('Failed to fetch document processing report.');
       } finally {
         setLoading(false);

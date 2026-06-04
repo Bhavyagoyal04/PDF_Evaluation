@@ -1,15 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-import { 
-  RotateCw, 
-  RotateCcw, 
-  ZoomIn, 
-  ZoomOut, 
-  ChevronUp, 
-  ChevronDown, 
-  Save, 
-  RotateCcw as ResetIcon, 
+import {
+  RotateCw,
+  RotateCcw,
+  ZoomIn,
+  ZoomOut,
+  ChevronUp,
+  ChevronDown,
+  Save,
+  RotateCcw as ResetIcon,
   AlertTriangle,
   ArrowLeft,
 } from 'lucide-react';
@@ -28,31 +28,41 @@ export default function NormalizedViewer({ documentId, onBack }) {
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState('');
-  
+
   const canvasRef = useRef(null);
   const renderTaskRef = useRef(null);
 
-  // Load document metadata
-  const loadDocDetails = async () => {
-    setLoading(true);
-    try {
-      const data = await getDocument(documentId);
-      setDoc(data);
-      // Sort pages by orderIndex initially
-      const sortedPages = [...data.pages].sort((a, b) => a.orderIndex - b.orderIndex);
-      setPages(sortedPages);
-      setSelectedPageIndex(0);
-    } catch (err) {
-      setError('Failed to fetch document page information.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    if (documentId) {
-      loadDocDetails();
-    }
+    if (!documentId) return;
+
+    let active = true;
+    const loadDocDetails = async () => {
+      setLoading(true);
+      try {
+        const data = await getDocument(documentId);
+        if (!active) return;
+        setDoc(data);
+        // Sort pages by orderIndex initially
+        const sortedPages = [...data.pages].sort((a, b) => a.orderIndex - b.orderIndex);
+        setPages(sortedPages);
+        setSelectedPageIndex(0);
+      } catch (err) {
+        console.error(err);
+        if (active) {
+          setError('Failed to fetch document page information.');
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadDocDetails();
+
+    return () => {
+      active = false;
+    };
   }, [documentId]);
 
   // Render selected page to canvas when pages, selection, scale, or loading state changes
@@ -134,16 +144,16 @@ export default function NormalizedViewer({ documentId, onBack }) {
   // Rotate functions
   const handleRotate = (direction) => {
     if (pages.length === 0) return;
-    
+
     setPages(prev => {
       const updated = [...prev];
       const page = { ...updated[selectedPageIndex] };
-      
+
       let newRotation = (page.currentRotation || 0) + (direction === 'cw' ? 90 : -90);
       // Keep rotation within 0, 90, 180, 270 range
       if (newRotation >= 360) newRotation -= 360;
       if (newRotation < 0) newRotation += 360;
-      
+
       page.currentRotation = newRotation;
       updated[selectedPageIndex] = page;
       return updated;
@@ -173,10 +183,10 @@ export default function NormalizedViewer({ documentId, onBack }) {
     if (direction === 'down' && index === pages.length - 1) return;
 
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    
+
     setPages(prev => {
       const updated = [...prev];
-      
+
       // Swap orderIndex values
       const tempOrder = updated[index].orderIndex;
       updated[index].orderIndex = updated[targetIndex].orderIndex;
@@ -208,6 +218,7 @@ export default function NormalizedViewer({ documentId, onBack }) {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
+      console.error(err);
       setError('Failed to save changes back to MongoDB server.');
     } finally {
       setSaving(false);
@@ -250,9 +261,9 @@ export default function NormalizedViewer({ documentId, onBack }) {
               {error}
             </span>
           )}
-          <button 
-            type="button" 
-            className="btn btn-primary btn-sm" 
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
             onClick={handleSaveChanges}
             disabled={saving}
             style={{ background: 'linear-gradient(135deg, var(--primary), var(--secondary))' }}
@@ -278,13 +289,13 @@ export default function NormalizedViewer({ documentId, onBack }) {
               const isRotated = page.currentRotation !== 0;
 
               return (
-                <div 
+                <div
                   key={page._id || idx}
                   className={`thumbnail-item ${isActive ? 'active' : ''}`}
                   onClick={() => setSelectedPageIndex(idx)}
                 >
                   <div className="thumbnail-num">{idx + 1}</div>
-                  
+
                   <div className="thumbnail-preview-holder">
                     {/* Visual placeholder inside sidebar */}
                     <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textAlign: 'center', padding: '0.25rem' }}>
@@ -311,19 +322,19 @@ export default function NormalizedViewer({ documentId, onBack }) {
 
                   {/* Reorder Buttons */}
                   <div className="reorder-controls" onClick={e => e.stopPropagation()}>
-                    <button 
-                      type="button" 
-                      className="btn-reorder" 
-                      disabled={idx === 0} 
+                    <button
+                      type="button"
+                      className="btn-reorder"
+                      disabled={idx === 0}
                       onClick={() => handleMovePage(idx, 'up')}
                       title="Move Page Up"
                     >
                       <ChevronUp size={16} />
                     </button>
-                    <button 
-                      type="button" 
-                      className="btn-reorder" 
-                      disabled={idx === pages.length - 1} 
+                    <button
+                      type="button"
+                      className="btn-reorder"
+                      disabled={idx === pages.length - 1}
                       onClick={() => handleMovePage(idx, 'down')}
                       title="Move Page Down"
                     >
@@ -351,18 +362,18 @@ export default function NormalizedViewer({ documentId, onBack }) {
             </div>
 
             <div className="toolbar-group">
-              <button 
-                type="button" 
-                className="btn btn-secondary btn-sm" 
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
                 onClick={() => handleRotate('ccw')}
                 title="Rotate 90° Counter-Clockwise"
                 style={{ padding: '0.4rem' }}
               >
                 <RotateCcw size={14} />
               </button>
-              <button 
-                type="button" 
-                className="btn btn-secondary btn-sm" 
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
                 onClick={() => handleRotate('cw')}
                 title="Rotate 90° Clockwise"
                 style={{ padding: '0.4rem' }}
@@ -370,9 +381,9 @@ export default function NormalizedViewer({ documentId, onBack }) {
                 <RotateCw size={14} />
               </button>
               <span style={{ width: '1px', height: '16px', background: 'var(--border-glass)' }}></span>
-              <button 
-                type="button" 
-                className="btn btn-secondary btn-sm" 
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
                 onClick={() => handleZoom(-0.1)}
                 title="Zoom Out"
                 style={{ padding: '0.4rem' }}
@@ -382,9 +393,9 @@ export default function NormalizedViewer({ documentId, onBack }) {
               <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', width: '32px', textAlign: 'center' }}>
                 {Math.round(scale * 100)}%
               </span>
-              <button 
-                type="button" 
-                className="btn btn-secondary btn-sm" 
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
                 onClick={() => handleZoom(0.1)}
                 title="Zoom In"
                 style={{ padding: '0.4rem' }}
@@ -392,9 +403,9 @@ export default function NormalizedViewer({ documentId, onBack }) {
                 <ZoomIn size={14} />
               </button>
               <span style={{ width: '1px', height: '16px', background: 'var(--border-glass)' }}></span>
-              <button 
-                type="button" 
-                className="btn btn-secondary btn-sm" 
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
                 onClick={handleReset}
                 title="Reset Rotation &amp; Scale"
                 style={{ padding: '0.4rem', color: 'var(--danger)' }}
@@ -411,12 +422,12 @@ export default function NormalizedViewer({ documentId, onBack }) {
                 Rendering...
               </div>
             )}
-            
+
             <div className="pdf-canvas-wrapper">
               <canvas ref={canvasRef} />
             </div>
           </div>
-          
+
           {selectedPage?.warnings?.length > 0 && (
             <div className="glass-card" style={{ marginTop: '1rem', padding: '1rem', borderLeft: '3px solid var(--warning)', borderRadius: 'var(--radius-md)' }}>
               <h4 style={{ color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', marginBottom: '0.25rem' }}>

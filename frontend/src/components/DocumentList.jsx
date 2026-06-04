@@ -23,6 +23,7 @@ export default function DocumentList({ documents, loading, onRefresh, onViewDocu
       await generateSampleDocument();
       onRefresh();
     } catch (err) {
+      console.error(err);
       alert('Failed to generate sample document. Check console for details.');
     } finally {
       setGenerating(false);
@@ -35,6 +36,7 @@ export default function DocumentList({ documents, loading, onRefresh, onViewDocu
         await deleteDocument(id);
         onRefresh();
       } catch (err) {
+        console.error(err);
         alert('Failed to delete document.');
       }
     }
