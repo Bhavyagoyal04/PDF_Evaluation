@@ -48,3 +48,8 @@ export const deleteDocument = async (id) => {
 export const getDocumentPDFUrl = (filePath) => {
   return `http://localhost:5001${filePath}`;
 };
+
+export const downloadNormalizedPDF = (id) => {
+  window.open(`${API_BASE}/${id}/export`, '_blank');
+};
+
