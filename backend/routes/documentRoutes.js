@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
-const { PDFDocument, rgb } = require('pdf-lib');
+const { PDFDocument, rgb, degrees } = require('pdf-lib');
 const Document = require('../models/Document');
 const { ingestPDF, ingestImage } = require('../services/ingestionService');
 
@@ -166,7 +166,31 @@ router.put('/:id/pages', async (req, res) => {
       return res.status(404).json({ error: 'Document not found' });
     }
 
-    // Map through body pages and update our subdocuments
+    // Identify deleted pages
+    const requestPageIds = pages.map(p => p._id);
+    const pagesToKeep = [];
+    
+    for (const pageSubdoc of doc.pages) {
+      const pageIdStr = pageSubdoc._id.toString();
+      if (requestPageIds.includes(pageIdStr)) {
+        pagesToKeep.push(pageSubdoc);
+      } else {
+        // Delete physical file from filesystem
+        const fullPath = path.join(__dirname, '..', pageSubdoc.filePath);
+        if (fs.existsSync(fullPath)) {
+          try {
+            fs.unlinkSync(fullPath);
+          } catch (err) {
+            console.error(`Failed to delete page file: ${fullPath}`, err);
+          }
+        }
+      }
+    }
+    
+    // Assign filtered pages back
+    doc.pages = pagesToKeep;
+
+    // Update remaining pages
     pages.forEach(updatedPage => {
       const pageSubdoc = doc.pages.id(updatedPage._id);
       if (pageSubdoc) {
@@ -178,12 +202,60 @@ router.put('/:id/pages', async (req, res) => {
 
     // Sort the subdocuments in memory by orderIndex to keep them aligned
     doc.pages.sort((a, b) => a.orderIndex - b.orderIndex);
+    
+    // Update totalPages count
+    doc.totalPages = doc.pages.length;
 
     await doc.save();
     res.json(doc);
   } catch (error) {
     console.error('Update Pages Error:', error);
-    res.status(500).json({ error: 'Failed to update page metadata' });
+    res.status(500).json({ error: 'Failed to update page metadata: ' + error.message });
+  }
+});
+
+/**
+ * @route GET /api/documents/:id/export
+ * @desc Compile sorted pages and rotate them as per current settings into a single PDF, then trigger download
+ */
+router.get('/:id/export', async (req, res) => {
+  try {
+    const doc = await Document.findById(req.params.id);
+    if (!doc) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+
+    const mergedPdf = await PDFDocument.create();
+    
+    // Sort pages in order of their orderIndex
+    const sortedPages = [...doc.pages].sort((a, b) => a.orderIndex - b.orderIndex);
+
+    for (const pageMeta of sortedPages) {
+      const fullPath = path.join(__dirname, '..', pageMeta.filePath);
+      if (!fs.existsSync(fullPath)) {
+        throw new Error(`Page file not found: ${pageMeta.filePath}`);
+      }
+
+      const pageBytes = fs.readFileSync(fullPath);
+      const pagePdf = await PDFDocument.load(pageBytes);
+      const [copiedPage] = await mergedPdf.copyPages(pagePdf, [0]);
+      
+      // Apply the final normalized rotation (currentRotation)
+      if (pageMeta.currentRotation !== undefined) {
+        copiedPage.setRotation(degrees(pageMeta.currentRotation));
+      }
+      
+      mergedPdf.addPage(copiedPage);
+    }
+
+    const pdfBytes = await mergedPdf.save();
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="normalized_${doc.name.replace(/[^a-zA-Z0-9.-]/g, '_')}"`);
+    res.send(Buffer.from(pdfBytes));
+  } catch (error) {
+    console.error('Export PDF Error:', error);
+    res.status(500).json({ error: 'Failed to compile and export normalized PDF: ' + error.message });
   }
 });
 

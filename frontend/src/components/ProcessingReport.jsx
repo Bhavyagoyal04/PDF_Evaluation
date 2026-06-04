@@ -8,9 +8,10 @@ import {
   Sliders, 
   Calendar, 
   Info,
-  Clock
+  Clock,
+  Download
 } from 'lucide-react';
-import { getDocument } from '../lib/api';
+import { getDocument, downloadNormalizedPDF } from '../lib/api';
 
 export default function ProcessingReport({ documentId, onBack, onOpenEditor }) {
   const [doc, setDoc] = useState(null);
@@ -83,14 +84,24 @@ export default function ProcessingReport({ documentId, onBack, onOpenEditor }) {
           </div>
         </div>
 
-        <button 
-          type="button" 
-          className="btn btn-secondary btn-sm" 
-          onClick={onOpenEditor}
-          style={{ border: '1px solid var(--primary)', color: '#818cf8', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-        >
-          <Sliders size={14} /> Adjust Normalisation
-        </button>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <button 
+            type="button" 
+            className="btn btn-secondary btn-sm" 
+            onClick={() => downloadNormalizedPDF(documentId)}
+            style={{ border: '1px solid var(--secondary)', color: '#c084fc', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+          >
+            <Download size={14} /> Export PDF
+          </button>
+          <button 
+            type="button" 
+            className="btn btn-secondary btn-sm" 
+            onClick={onOpenEditor}
+            style={{ border: '1px solid var(--primary)', color: '#818cf8', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+          >
+            <Sliders size={14} /> Adjust Normalisation
+          </button>
+        </div>
       </div>
 
       <div className="report-grid">

@@ -10,9 +10,10 @@ import {
   FolderOpen,
   Calendar,
   Layers,
-  Activity
+  Activity,
+  Download
 } from 'lucide-react';
-import { generateSampleDocument, deleteDocument } from '../lib/api';
+import { generateSampleDocument, deleteDocument, downloadNormalizedPDF } from '../lib/api';
 
 export default function DocumentList({ documents, loading, onRefresh, onViewDocument, onViewReport }) {
   const [generating, setGenerating] = useState(false);
@@ -141,9 +142,44 @@ export default function DocumentList({ documents, loading, onRefresh, onViewDocu
         </div>
 
         {loading && documents.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
-            <div className="loading-spinner" style={{ margin: '0 auto 1rem' }}></div>
-            Loading scanned sheets...
+          <div className="document-table-wrapper">
+            <table className="doc-table">
+              <thead>
+                <tr>
+                  <th>Document Name</th>
+                  <th>Uploaded At</th>
+                  <th>File Size</th>
+                  <th>Pages</th>
+                  <th>Warnings</th>
+                  <th>Status</th>
+                  <th style={{ textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[1, 2, 3].map((n) => (
+                  <tr key={n} className="skeleton-row">
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div className="skeleton-circle" />
+                        <div className="skeleton-bar" style={{ width: '150px' }} />
+                      </div>
+                    </td>
+                    <td><div className="skeleton-bar" style={{ width: '120px' }} /></td>
+                    <td><div className="skeleton-bar" style={{ width: '60px' }} /></td>
+                    <td><div className="skeleton-bar" style={{ width: '30px' }} /></td>
+                    <td><div className="skeleton-badge" /></td>
+                    <td><div className="skeleton-badge" /></td>
+                    <td>
+                      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                        <div className="skeleton-bar" style={{ width: '60px', height: '24px' }} />
+                        <div className="skeleton-bar" style={{ width: '60px', height: '24px' }} />
+                        <div className="skeleton-bar" style={{ width: '30px', height: '24px' }} />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         ) : documents.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '4rem 2rem', color: 'var(--text-secondary)', border: '1px dashed var(--border-glass)', borderRadius: 'var(--radius-md)' }}>
@@ -236,6 +272,15 @@ export default function DocumentList({ documents, loading, onRefresh, onViewDocu
                             style={{ padding: '0.4rem 0.6rem', color: 'var(--secondary)' }}
                           >
                             Report
+                          </button>
+                          <button 
+                            type="button" 
+                            className="btn btn-secondary btn-sm"
+                            title="Export Compiled PDF"
+                            onClick={() => downloadNormalizedPDF(doc._id)}
+                            style={{ padding: '0.4rem 0.6rem', color: '#c084fc', border: '1px solid rgba(168, 85, 247, 0.2)' }}
+                          >
+                            <Download size={14} /> Export
                           </button>
                           <button 
                             type="button" 
