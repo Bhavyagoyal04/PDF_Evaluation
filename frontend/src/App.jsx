@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Layers, Sparkles, AlertCircle } from 'lucide-react';
+import { Layers, AlertCircle } from 'lucide-react';
 import UploadZone from './components/UploadZone';
 import DocumentList from './components/DocumentList';
 import NormalizedViewer from './components/NormalizedViewer';
@@ -29,6 +29,7 @@ function App() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchDocuments();
   }, []);
 

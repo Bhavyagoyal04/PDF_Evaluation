@@ -44,26 +44,38 @@ export default function NormalizedViewer({ documentId, onBack }) {
   const renderTaskRef = useRef(null);
 
   // Load document metadata
-  const loadDocDetails = async () => {
-    setLoading(true);
-    try {
-      const data = await getDocument(documentId);
-      setDoc(data);
-      // Sort pages by orderIndex initially
-      const sortedPages = [...data.pages].sort((a, b) => a.orderIndex - b.orderIndex);
-      setPages(sortedPages);
-      setSelectedPageIndex(0);
-    } catch (err) {
-      setError('Failed to fetch document page information.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    if (documentId) {
-      loadDocDetails();
-    }
+    if (!documentId) return;
+
+    let active = true;
+    const loadDocDetails = async () => {
+      setLoading(true);
+      try {
+        const data = await getDocument(documentId);
+        if (active) {
+          setDoc(data);
+          // Sort pages by orderIndex initially
+          const sortedPages = [...data.pages].sort((a, b) => a.orderIndex - b.orderIndex);
+          setPages(sortedPages);
+          setSelectedPageIndex(0);
+        }
+      } catch (err) {
+        console.error(err);
+        if (active) {
+          setError('Failed to fetch document page information.');
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadDocDetails();
+
+    return () => {
+      active = false;
+    };
   }, [documentId]);
 
   // Render selected page to canvas when pages, selection, scale, or loading state changes
